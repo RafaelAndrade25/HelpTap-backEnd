@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.HelpTapProj-backEnd</groupId>
 	<artifactId>HelpTap-backEnd</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1.0</version>
 	<name>HelpTap-backEnd</name>
 	<description>HelpTap Project back end</description>
 	<url/>
