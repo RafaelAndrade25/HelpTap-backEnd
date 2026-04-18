@@ -1,5 +1,6 @@
 package com.help.tap.service;
 
+import com.help.tap.client.CredentialValidationClient;
 import com.help.tap.dto.authentication.UserCreateDTO;
 import com.help.tap.dto.authentication.UserResponseDTO;
 import com.help.tap.dto.UserUpdateDTO;
@@ -20,10 +21,23 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    //private final PasswordEncoder passwordEncoder;
+    private final CredentialValidationClient credentialValidationClient;
 
     @Transactional
     public UserResponseDTO createUser(UserCreateDTO userCreateDTO) {
+
+        validateUniqueEmail(userCreateDTO.email());
+        validateUniqueNationalRegistration(userCreateDTO.cpf());
+
+        if (userCreateDTO.identifier() != null && !userCreateDTO.identifier().isEmpty()) {
+            validateUniqueIdentifier(userCreateDTO.identifier());
+        }
+
+        // Validação de credenciais para roles do Web Mobile
+        if (requiresCredentialValidation(userCreateDTO.role())) {
+            validateProfessionalCredential(userCreateDTO.identifier(), userCreateDTO.role());
+        }
+
         if (userRepository.existsByEmail(userCreateDTO.email())) {
             throw new IllegalArgumentException("Email already in use");
         }
@@ -91,6 +105,7 @@ public class UserService {
             }
             user.setEmail(dto.email());
         }
+
         if (dto.identifier() != null && !dto.identifier().equals(user.getIdentifier())) {
             if (userRepository.existsByIdentifier(dto.identifier())) {
                 throw new IllegalArgumentException("Identificador já cadastrado");
@@ -116,6 +131,157 @@ public class UserService {
         }
         userRepository.deleteById(id);
     }
+
+    private void validateUniqueEmail(String email){
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already registered: " + email);
+        }
+    }
+
+    private void validateUniqueNationalRegistration(String nationalRegistration){
+        if (userRepository.existsByNationalRegistration(nationalRegistration)) {
+            throw new IllegalArgumentException("National Registration already registered" + nationalRegistration);
+        }
+    }
+
+    private void validateUniqueIdentifier(String identifier){
+        if (userRepository.existsByIdentifier(identifier)) {
+            throw new IllegalArgumentException("Identifier already registered" + identifier);
+        }
+    }
+
+    private boolean requiresCredentialValidation(UserRole role) {
+        return role == UserRole.DOCTOR
+                || role == UserRole.POLICE
+                || role == UserRole.FIREFIGHTER
+                || role == UserRole.RESCUER;
+    }
+
+    private void validateProfessionalCredential(String identifier, UserRole role) {
+        if (identifier == null || identifier.isEmpty()) {
+            throw new IllegalArgumentException(getCredentialRequiredMessage(role));
+        }
+
+        CredentialInfo info = extractCredentialInfo(identifier, role);
+
+        credentialValidationClient.validate(
+                info.credential(),
+                info.uf(),
+                info.type()
+        );
+    }
+
+    private CredentialInfo extractCredentialInfo(String identifier, UserRole role){
+        return switch (role) {
+            case DOCTOR -> extractCrmInfo(identifier);
+            case POLICE -> extractPoliceInfo(identifier);
+            case FIREFIGHTER -> extractFirefighterInfo(identifier);
+            case RESCUER -> extractCorenInfo(identifier);
+            default -> throw new IllegalArgumentException("Role does not require validation");
+        };
+    }
+
+    private CredentialInfo extractCrmInfo(String identifier){
+        String[] parts = identifier.toUpperCase().split("-");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException(
+                    "Invalid CRM format. It Must Be: CRM123456-SP ou 123456-SP"
+            );
+        }
+
+        String crm = parts[0].replace("CRM", "").trim();
+        String uf = parts[1].trim();
+
+        if (!crm.matches("\\d+")) {
+            throw new IllegalArgumentException("CRM number must contain only digits");
+        }
+
+        if (uf.length() != 2) {
+            throw new IllegalArgumentException("UF must have 2 characters (ex: SP, RJ)");
+        }
+
+        return new CredentialInfo(crm, uf, "CRM");
+    }
+
+    private CredentialInfo extractCorenInfo(String identifier) {
+        String[] parts = identifier.toUpperCase().split("-");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException(
+                    "Invalid COREN format. It Must Be: COREN123456-SP ou 123456-SP"
+            );
+        }
+
+        String coren = parts[0].replace("COREN", "").trim();
+        String uf = parts[1].trim();
+
+        if (!coren.matches("\\d+")) {
+            throw new IllegalArgumentException("COREN number must contain only digits");
+        }
+
+        if (uf.length() != 2) {
+            throw new IllegalArgumentException("UF must have 2 characters (ex: SP, RJ)");
+        }
+
+        return new CredentialInfo(coren, uf, "COREN");
+    }
+
+    private CredentialInfo extractPoliceInfo(String identifier) {
+        String[] parts = identifier.toUpperCase().split("-");
+        if (parts.length < 2) {
+            throw new IllegalArgumentException(
+                    "Invalid Police Functional ID format. It Must Be: POL12345-SSP-SP"
+            );
+        }
+
+        String uf = parts[parts.length - 1].trim();
+
+        if (uf.length() != 2) {
+            throw new IllegalArgumentException("UF must have 2 characters (ex: SP, RJ)");
+        }
+
+        return new CredentialInfo(identifier.toUpperCase(), uf, "POLICE");
+    }
+
+    private CredentialInfo extractFirefighterInfo(String identifier) {
+        String[] parts = identifier.toUpperCase().split("-");
+        if (parts.length < 2) {
+            throw new IllegalArgumentException(
+                    "Invalid Firefighter Functional ID format. It Must Be: CBM98765-SP"
+            );
+        }
+
+        String uf = parts[parts.length - 1].trim();
+
+        if (uf.length() != 2) {
+            throw new IllegalArgumentException("UF must have 2 characters (ex: SP, RJ)");
+        }
+
+        return new CredentialInfo(identifier.toUpperCase(), uf, "FIREFIGHTER");
+    }
+
+    private String getCredentialRequiredMessage(UserRole role) {
+        return switch (role) {
+            case DOCTOR -> "CRM is mandatory for doctors. Formato: CRM123456-SP";
+            case RESCUER -> "COREN is mandatory for nurses. Formato: COREN123456-SP";
+            case POLICE -> "ID Funcional is mandatory for police officers. Formato: POL12345-SSP-SP";
+            case FIREFIGHTER -> "ID Funcional is mandatory for firefighters. Formato: CBM98765-SP";
+            default -> "Credencial é obrigatória para esta função";
+        };
+    }
+
+    private record CredentialInfo(String credential, String uf, String type) {}
+
+    public boolean isOwner(org.springframework.security.core.Authentication authentication, Integer userId) {
+        if (authentication == null || authentication.getName() == null) {
+            return false;
+        }
+
+        String email = authentication.getName();
+        User user = userRepository.findById(userId).orElse(null);
+
+        return user != null && user.getEmail().equals(email);
+    }
+
     private UserResponseDTO toResponseDTO(User user) {
         return new UserResponseDTO(
                 user.getId(),
