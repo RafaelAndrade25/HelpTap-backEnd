@@ -3,12 +3,15 @@ package com.help.tap.service;
 import com.help.tap.dto.wearable.WearableCreateDTO;
 import com.help.tap.dto.wearable.WearableResponseDTO;
 import com.help.tap.dto.wearable.WearableUpdateDTO;
+import com.help.tap.exception.BusinessRuleException;
+import com.help.tap.exception.WearableLimitExceededException;
 import com.help.tap.model.User;
 import com.help.tap.model.Wearable;
 import com.help.tap.repository.UserRepository;
 import com.help.tap.repository.WearableRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,18 +26,26 @@ public class WearableService {
     private final WearableRepository wearableRepository;
     private final UserRepository userRepository;
 
+    @Value("${helptap.wearable.max-per-user:5}")
+    private int maxWearablesPerUser;
+
+    // -------------------------------------------------------------------------
+    // CREATE
+    // -------------------------------------------------------------------------
+
     @Transactional
     public WearableResponseDTO createWearable(WearableCreateDTO dto) {
         User user = userRepository.findById(dto.userId())
                 .orElseThrow(() -> new EntityNotFoundException(
-                        "User not found for ID: " + dto.userId()));
+                        "Usuário não encontrado com ID: " + dto.userId()));
+        enforceWearableLimit(dto.userId());
 
         Wearable wearable = Wearable.builder()
                 .user(user)
                 .wearableName(dto.wearableName())
-                .status(true)                      // ativa por padrão
-                .accessUrl(generateUniqueUUID())   // UUID gerado e validado no servidor
-                .bindingDate(LocalDate.now())      // data de vínculo automática
+                .status(true)
+                .accessUrl(generateUniqueUUID())  // REGRA 2: UUID único garantido
+                .bindingDate(LocalDate.now())
                 .build();
 
         return WearableResponseDTO.fromEntity(wearableRepository.save(wearable));
@@ -42,19 +53,14 @@ public class WearableService {
 
     @Transactional(readOnly = true)
     public WearableResponseDTO getWearableById(Integer id) {
-        Wearable wearable = wearableRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Bracelet not found for ID: " + id));
-
-        return WearableResponseDTO.fromEntity(wearable);
+        return WearableResponseDTO.fromEntity(findOrThrow(id));
     }
 
     @Transactional(readOnly = true)
     public List<WearableResponseDTO> getWearablesByUserId(Integer userId) {
         if (!userRepository.existsById(userId)) {
-            throw new EntityNotFoundException("User not found for ID: " + userId);
+            throw new EntityNotFoundException("Usuário não encontrado com ID: " + userId);
         }
-
         return wearableRepository.findByUser_Id(userId)
                 .stream()
                 .map(WearableResponseDTO::fromEntity)
@@ -63,52 +69,59 @@ public class WearableService {
 
     @Transactional
     public WearableResponseDTO updateWearable(Integer id, WearableUpdateDTO dto) {
-        Wearable wearable = wearableRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Bracelet not found for ID: " + id));
+        Wearable wearable = findOrThrow(id);
 
-        // accessUrl e bindingDate são imutáveis — nunca tocados aqui
+        // REGRA 3: accessUrl e bindingDate são imutáveis — nunca expostos no DTO de update
         if (dto.wearableName() != null) wearable.setWearableName(dto.wearableName());
         if (dto.status()       != null) wearable.setStatus(dto.status());
 
         return WearableResponseDTO.fromEntity(wearableRepository.save(wearable));
     }
 
-    /**
-     * Ativa ou desativa uma pulseira sem alterar nenhum outro dado.
-     * Endpoint dedicado: PATCH /api/wearables/{id}/status
-     */
     @Transactional
     public WearableResponseDTO toggleStatus(Integer id) {
-        Wearable wearable = wearableRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Bracelet not found for ID: " + id));
-
+        Wearable wearable = findOrThrow(id);
         wearable.setStatus(!wearable.getStatus());
-
         return WearableResponseDTO.fromEntity(wearableRepository.save(wearable));
     }
 
     @Transactional
     public void deleteWearable(Integer id) {
-        if (!wearableRepository.existsById(id)) {
-            throw new EntityNotFoundException("Bracelet not found for ID: " + id);
+        Wearable wearable = findOrThrow(id);
+
+        // REGRA 4: não permite excluir pulseira ativa — deve ser desativada antes
+        if (Boolean.TRUE.equals(wearable.getStatus())) {
+            throw new BusinessRuleException(
+                    "Não é possível excluir uma pulseira ativa. " +
+                            "Desative-a primeiro via PATCH /api/wearables/" + id + "/status."
+            );
         }
+
         wearableRepository.deleteById(id);
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+    private Wearable findOrThrow(Integer id) {
+        return wearableRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Pulseira não encontrada com ID: " + id));
+    }
 
-    /**
-     * Gera um UUID v4 garantidamente único no banco.
-     * A colisão de UUIDs é astronomicamente improvável, mas a verificação
-     * existe como camada extra de segurança para um dado tão crítico.
-     */
+    private void enforceWearableLimit(Integer userId) {
+        int count = wearableRepository.findByUser_Id(userId).size();
+        if (count >= maxWearablesPerUser) {
+            throw new WearableLimitExceededException(userId, maxWearablesPerUser);
+        }
+    }
+
     private UUID generateUniqueUUID() {
         UUID uuid;
+        int attempts = 0;
         do {
+            if (attempts++ > 10) {
+                throw new BusinessRuleException(
+                        "Não foi possível gerar um UUID único após múltiplas tentativas. " +
+                                "Contate o suporte.");
+            }
             uuid = UUID.randomUUID();
         } while (wearableRepository.existsByAccessUrl(uuid));
         return uuid;
