@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class allergies {
+public class Allergies {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer ilnessId;
