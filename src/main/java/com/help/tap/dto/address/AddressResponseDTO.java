@@ -14,7 +14,7 @@ public record AddressResponseDTO(
 ) {
     public static AddressResponseDTO fromEntity(Address address) {
         return new AddressResponseDTO(
-                address.getAddressid(),
+                address.getId(),
                 address.getUser().getId(),
                 address.getCep(),
                 address.getNeighborhood(),

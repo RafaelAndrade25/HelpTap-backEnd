@@ -42,7 +42,7 @@ public class AddressService {
 
     @Transactional(readOnly = true)
     public AddressResponseDTO getAddressById(Integer id) {
-        Address address = addressRepository.findById(Long.valueOf(id))
+        Address address = addressRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Endereço não encontrado com ID: " + id));
 
@@ -63,7 +63,7 @@ public class AddressService {
 
     @Transactional
     public AddressResponseDTO updateAddress(Integer id, AddressUpdateDTO dto) {
-        Address address = addressRepository.findById(Long.valueOf(id))
+        Address address = addressRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Endereço não encontrado com ID: " + id));
 
@@ -79,9 +79,9 @@ public class AddressService {
 
     @Transactional
     public void deleteAddress(Integer id) {
-        if (!addressRepository.existsById(Long.valueOf(id))) {
+        if (!addressRepository.existsById(id)) {
             throw new EntityNotFoundException("Endereço não encontrado com ID: " + id);
         }
-        addressRepository.deleteById(Long.valueOf(id));
+        addressRepository.deleteById(id);
     }
 }

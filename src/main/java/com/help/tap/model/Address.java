@@ -13,7 +13,7 @@ import lombok.*;
 public class Address {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer Addressid;
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_user", nullable = false)
