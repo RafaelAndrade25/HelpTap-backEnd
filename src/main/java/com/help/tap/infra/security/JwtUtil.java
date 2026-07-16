@@ -15,10 +15,10 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Component
 public class JwtUtil {
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:defaultSecretKeyForJwtTokenGenerationAndValidation2024ThisMustBe512BitsLongForHS512Algorithm}")
     private String secret;
 
-    @Value("${jwt.expiration}")
+    @Value("${jwt.expiration:86400000}")
     private Long expiration;
 
     private Key getSigningKey() {
@@ -73,9 +73,9 @@ public class JwtUtil {
         return extractExpiration(token).before(new Date());
     }
 
-    public Boolean validateToken(String token, User user) {
+    public Boolean validateToken(String token, org.springframework.security.core.userdetails.UserDetails userDetails) {
         final String email = extractEmail(token);
-        return (email.equals(user.getUsername()) && !isTokenExpired(token));
+        return (email.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
     public Boolean validateToken(String token) {
