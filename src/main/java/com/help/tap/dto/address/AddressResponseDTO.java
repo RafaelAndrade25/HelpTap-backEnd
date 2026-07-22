@@ -8,7 +8,7 @@ public record AddressResponseDTO(
         String cep,
         String neighborhood,
         String street,
-        Integer number,
+        String number,
         String city,
         String state
 ) {

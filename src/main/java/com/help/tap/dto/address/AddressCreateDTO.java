@@ -22,7 +22,7 @@ public record AddressCreateDTO(@NotNull(message = "O ID do usuário é obrigató
 
                                @NotBlank(message = "O número é obrigatório")
                                @Size(max = 20, message = "O número deve ter no máximo 20 caracteres")
-                               Integer number,
+                               String number,
 
                                @NotBlank(message = "A cidade é obrigatória")
                                @Size(max = 100, message = "A cidade deve ter no máximo 100 caracteres")

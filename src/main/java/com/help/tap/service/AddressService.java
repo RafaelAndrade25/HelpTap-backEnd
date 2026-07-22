@@ -70,7 +70,7 @@ public class AddressService {
         if (dto.cep() != null) address.setCep(dto.cep());
         if (dto.neighborhood() != null) address.setNeighborhood(dto.neighborhood());
         if (dto.street() != null) address.setStreet(dto.street());
-        if (dto.number() != null) address.setNumber(dto.number());
+        if (dto.number() != null) address.setNumber(String.valueOf(dto.number()));
         if (dto.city() != null) address.setCity(dto.city());
         if (dto.state() != null) address.setState(dto.state().toUpperCase());
 

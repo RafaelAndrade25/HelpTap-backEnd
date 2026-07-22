@@ -13,7 +13,7 @@ public record AddressUpdateDTO(@Pattern(regexp = "\\d{5}-\\d{3}", message = "O C
                                String street,
 
                               @Size(max = 20, message = "O número deve ter no máximo 20 caracteres")
-                              Integer number,
+                              String number,
 
                               @Size(max = 100, message = "A cidade deve ter no máximo 100 caracteres")
                               String city,

@@ -19,7 +19,7 @@ public class Address {
     @JoinColumn(name = "id_user", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 8)
+    @Column(nullable = false, length = 9)
     private String cep;
 
     @Column(nullable = false)
@@ -29,7 +29,7 @@ public class Address {
     private String street;
 
     @Column(nullable = false)
-    private Integer number;
+    private String number;
 
     @Column(nullable = false)
     private String city;
