@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,8 +30,9 @@ public class IllnessController {
 
     @GetMapping("/{illnessId}")
     public ResponseEntity<IllnessResponseDTO> getIllnessById(
-            @PathVariable Integer illnessId) {
-        IllnessResponseDTO illness = illnessService.getIllnessById(illnessId);
+            @PathVariable Integer illnessId,
+            Authentication authentication) {
+        IllnessResponseDTO illness = illnessService.getIllnessById(illnessId, authentication);
         return ResponseEntity.ok(illness);
     }
 
@@ -43,11 +45,12 @@ public class IllnessController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<IllnessResponseDTO>> getIllnessesByUser(
             @PathVariable Integer userId,
-            @RequestParam(required = false) RiskRating risk) {
+            @RequestParam(required = false) RiskRating risk,
+            Authentication authentication) {
 
         List<IllnessResponseDTO> illnesses = (risk != null)
-                ? illnessService.getIllnessesByUserIdAndRisk(userId, risk)
-                : illnessService.getIllnessesByUserId(userId);
+                ? illnessService.getIllnessesByUserIdAndRisk(userId, risk, authentication)
+                : illnessService.getIllnessesByUserId(userId, authentication);
 
         return ResponseEntity.ok(illnesses);
     }

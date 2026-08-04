@@ -13,6 +13,8 @@ import com.help.tap.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.help.tap.model.UserRole;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,26 +59,31 @@ public class IllnessService {
     }
 
     @Transactional(readOnly = true)
-    public IllnessResponseDTO getIllnessById(Integer illnessId) {
-        return toResponseDTO(findOrThrow(illnessId));
+    public IllnessResponseDTO getIllnessById(Integer illnessId, Authentication authentication) {
+        Illness illness = findOrThrow(illnessId);
+        if (Boolean.TRUE.equals(illness.getIsSensitive()) && !canAccessSensitiveData(authentication, illness.getUser().getId())) {
+            throw new BusinessRuleException("Acesso negado: dados sensíveis requerem permissão.");
+        }
+        return toResponseDTO(illness, authentication);
     }
 
     @Transactional(readOnly = true)
-    public List<IllnessResponseDTO> getIllnessesByUserId(Integer userId) {
+    public List<IllnessResponseDTO> getIllnessesByUserId(Integer userId, Authentication authentication) {
         ensureUserExists(userId);
         return illnessRepository.findByUser_Id(userId)
                 .stream()
-                .map(this::toResponseDTO)
+                .map(illness -> toResponseDTO(illness, authentication))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<IllnessResponseDTO> getIllnessesByUserIdAndRisk(Integer userId,
-                                                                RiskRating riskRating) {
+                                                                RiskRating riskRating,
+                                                                Authentication authentication) {
         ensureUserExists(userId);
         return illnessRepository.findByUser_IdAndRiskRating(userId, riskRating)
                 .stream()
-                .map(this::toResponseDTO)
+                .map(illness -> toResponseDTO(illness, authentication))
                 .toList();
     }
 
@@ -112,18 +119,39 @@ public class IllnessService {
     }
 
     /**
-     * Converte entidade para DTO descriptografando os campos sensíveis.
-     * Encapsula o try/catch para não poluir os métodos de negócio.
+     * Converte entidade para DTO descriptografando os campos sensíveis se permitido.
      */
+    private IllnessResponseDTO toResponseDTO(Illness illness, Authentication authentication) {
+        illness.setEncryptionUtil(encryptionUtil);
+        boolean canDecrypt = !Boolean.TRUE.equals(illness.getIsSensitive()) || 
+                             canAccessSensitiveData(authentication, illness.getUser().getId());
+                             
+        try {
+            return new IllnessResponseDTO(
+                    illness.getIlnessId(),
+                    illness.getUser().getId(),
+                    canDecrypt ? illness.getDecryptedName() : "[DADOS SENSÍVEIS]",
+                    illness.getIsSensitive(),
+                    canDecrypt ? illness.getDecryptedNotes() : "[DADOS SENSÍVEIS]",
+                    illness.getRiskRating()
+            );
+        } catch (Exception e) {
+            log.error("Erro ao descriptografar doença ID {}: {}", illness.getIlnessId(), e.getMessage());
+            throw new BusinessRuleException(
+                    "Falha ao recuperar os dados sensíveis. Contate o suporte.");
+        }
+    }
+    
+    // Método sobrecarregado para uso interno onde a autenticação não importa (ex: create/update já validam dono)
     private IllnessResponseDTO toResponseDTO(Illness illness) {
         illness.setEncryptionUtil(encryptionUtil);
         try {
             return new IllnessResponseDTO(
                     illness.getIlnessId(),
                     illness.getUser().getId(),
-                    illness.getDecryptedName(),   // descriptografa se isSensitive = true
+                    illness.getDecryptedName(),
                     illness.getIsSensitive(),
-                    illness.getDecryptedNotes(),  // descriptografa se isSensitive = true
+                    illness.getDecryptedNotes(),
                     illness.getRiskRating()
             );
         } catch (Exception e) {
@@ -176,5 +204,36 @@ public class IllnessService {
         if (!userRepository.existsById(userId)) {
             throw new EntityNotFoundException("Usuário não encontrado com ID: " + userId);
         }
+    }
+
+    private boolean canAccessSensitiveData(Authentication authentication, Integer targetUserId) {
+        if (authentication == null) return false;
+        UserRole role = extractRole(authentication);
+        if (role == null) return false;
+
+        return switch (role) {
+            case DOCTOR  -> true;
+            case PATIENT -> isOwner(authentication, targetUserId);
+            default      -> false; // RESCUER, ADMIN, POLICE, FIREFIGHTER sem acesso direto
+        };
+    }
+
+    private boolean isOwner(Authentication authentication, Integer targetUserId) {
+        return userRepository.findByEmail(authentication.getName())
+                .map(u -> u.getId().equals(targetUserId))
+                .orElse(false);
+    }
+
+    private UserRole extractRole(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> {
+                    try {
+                        return UserRole.valueOf(auth.getAuthority().replace("ROLE_", ""));
+                    } catch (IllegalArgumentException e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
     }
 }

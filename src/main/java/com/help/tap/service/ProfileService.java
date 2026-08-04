@@ -148,9 +148,9 @@ public class ProfileService {
                         return new IllnessResponseDTO(
                                 illness.getIlnessId(),
                                 illness.getUser().getId(),
-                                illness.getIllnessName(),
+                                name,
                                 illness.getIsSensitive(),
-                                illness.getNotes(),
+                                notes,
                                 illness.getRiskRating()
 
                         );

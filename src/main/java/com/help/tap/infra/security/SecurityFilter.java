@@ -1,7 +1,5 @@
 package com.help.tap.infra.security;
 
-
-import com.help.tap.model.User;
 import com.help.tap.service.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,8 +25,8 @@ public class SecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws IOException, ServletException {
+            HttpServletResponse response,
+            FilterChain filterChain) throws IOException, ServletException {
 
         final String authHeader = request.getHeader("Authorization");
 
@@ -37,7 +35,7 @@ public class SecurityFilter extends OncePerRequestFilter {
             return;
         }
 
-        try{
+        try {
             final String jwt = authHeader.substring(7);
             final String userEmail = jwtUtil.extractEmail(jwt);
 

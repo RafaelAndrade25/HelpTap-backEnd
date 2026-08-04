@@ -29,6 +29,9 @@ public class WearableService {
     @Value("${helptap.wearable.max-per-user:5}")
     private int maxWearablesPerUser;
 
+    @Value("${helptap.wearable.base-url:https://helptap.com/wearable/}")
+    private String baseUrl;
+
     // -------------------------------------------------------------------------
     // CREATE
     // -------------------------------------------------------------------------
@@ -48,12 +51,12 @@ public class WearableService {
                 .bindingDate(LocalDate.now())
                 .build();
 
-        return WearableResponseDTO.fromEntity(wearableRepository.save(wearable));
+        return WearableResponseDTO.fromEntity(wearableRepository.save(wearable), baseUrl);
     }
 
     @Transactional(readOnly = true)
     public WearableResponseDTO getWearableById(Integer id) {
-        return WearableResponseDTO.fromEntity(findOrThrow(id));
+        return WearableResponseDTO.fromEntity(findOrThrow(id), baseUrl);
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +66,7 @@ public class WearableService {
         }
         return wearableRepository.findByUser_Id(userId)
                 .stream()
-                .map(WearableResponseDTO::fromEntity)
+                .map(wearable -> WearableResponseDTO.fromEntity(wearable, baseUrl))
                 .toList();
     }
 
@@ -75,14 +78,14 @@ public class WearableService {
         if (dto.wearableName() != null) wearable.setWearableName(dto.wearableName());
         if (dto.status()       != null) wearable.setStatus(dto.status());
 
-        return WearableResponseDTO.fromEntity(wearableRepository.save(wearable));
+        return WearableResponseDTO.fromEntity(wearableRepository.save(wearable), baseUrl);
     }
 
     @Transactional
     public WearableResponseDTO toggleStatus(Integer id) {
         Wearable wearable = findOrThrow(id);
         wearable.setStatus(!wearable.getStatus());
-        return WearableResponseDTO.fromEntity(wearableRepository.save(wearable));
+        return WearableResponseDTO.fromEntity(wearableRepository.save(wearable), baseUrl);
     }
 
     @Transactional
