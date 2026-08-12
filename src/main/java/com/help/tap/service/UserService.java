@@ -74,7 +74,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO getUserById(Integer id) {
         User user = userRepository.findById(id)
-                .filter(u -> !u.getDeleted())
+                .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
         return toResponseDTO(user);
 
@@ -83,7 +83,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
-                .filter(u -> !u.getDeleted())
+                .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
                 .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
 
         return toResponseDTO(user);
@@ -93,7 +93,7 @@ public class UserService {
     public List<UserResponseDTO> getAllUsers() {
         return userRepository.findAll()
                 .stream()
-                .filter(u -> !u.getDeleted())
+                .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -102,7 +102,7 @@ public class UserService {
     public List<UserResponseDTO> getUsersByRole(UserRole role) {
         return userRepository.findByRole(role)
                 .stream()
-                .filter(u -> !u.getDeleted())
+                .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -110,7 +110,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO updateUser(Integer id, UserUpdateDTO dto) {
         User user = userRepository.findById(id)
-                .filter(u -> !u.getDeleted())
+                .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com ID: " + id));
 
         if (dto.email() != null && !dto.email().equals(user.getEmail())) {
