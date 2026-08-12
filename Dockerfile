@@ -24,3 +24,4 @@ EXPOSE 8080
 # -Xms100m: Initial Heap 100MB
 # -Xss512k: Thread Stack Size 512KB
 ENTRYPOINT ["java", "-Xmx200m", "-Xms100m", "-Xss512k", "-jar", "app.jar"]
+    
