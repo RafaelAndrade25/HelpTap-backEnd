@@ -62,6 +62,22 @@ public class User implements UserDetails {
     @Column(name = "professional_id")
     private String professionalId;
 
+    // 1. Correção em tal problema (Adição de campos para telefone, LGPD e exclusão lógica)
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "privacy_policy_accepted")
+    @Builder.Default
+    private Boolean privacyPolicyAccepted = false;
+
+    @Column(name = "terms_of_use_accepted")
+    @Builder.Default
+    private Boolean termsOfUseAccepted = false;
+
+    @Column(name = "deleted")
+    @Builder.Default
+    private Boolean deleted = false;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Address> addresses = new ArrayList<>();

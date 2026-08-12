@@ -8,32 +8,33 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-public record UserUpdateDTO(@Size(min = 3, max = 255, message = "Nome deve ter entre 3 e 255 caracteres")
-                            String fullName,
+public record UserUpdateDTO(
+        @Size(min = 3, max = 255, message = "Nome deve ter entre 3 e 255 caracteres") String fullName,
 
-                            @Past(message = "Data de nascimento deve ser no passado")
-                            LocalDate dateBirth,
+        @Past(message = "Data de nascimento deve ser no passado") LocalDate dateBirth,
 
-                            @Pattern(regexp = "^(MASCULINO|FEMININO|OUTRO)$", message = "Sexo deve ser MASCULINO, FEMININO ou OUTRO")
-                            String sex,
+        @Pattern(regexp = "^(MASCULINO|FEMININO|OUTRO)$", message = "Sexo deve ser MASCULINO, FEMININO ou OUTRO") String sex,
 
-                            @Email(message = "Email deve ser válido")
-                            String email,
+        @Email(message = "Email deve ser válido") String email,
 
-                            @Size(min = 6, message = "Senha deve ter no mínimo 6 caracteres")
-                            String password,
+        @Size(min = 6, message = "Senha deve ter no mínimo 6 caracteres") String password,
 
-                            @Size(max = 255, message = "Nome do pai deve ter no máximo 255 caracteres")
-                            String nameOfFather,
+        @Size(max = 255, message = "Nome do pai deve ter no máximo 255 caracteres") String nameOfFather,
 
-                            @Size(max = 255, message = "Nome da mãe deve ter no máximo 255 caracteres")
-                            String nameOfMother,
+        @Size(max = 255, message = "Nome da mãe deve ter no máximo 255 caracteres") String nameOfMother,
 
-                            @Size(max = 255, message = "Tipo de usuário deve ter no máximo 255 caracteres")
-                            String userType,
+        @Size(max = 255, message = "Tipo de usuário deve ter no máximo 255 caracteres") String userType,
 
-                            @Size(max = 255, message = "Identificador deve ter no máximo 255 caracteres")
-                            String identifier,
+        @Size(max = 255, message = "Identificador deve ter no máximo 255 caracteres") String identifier,
 
-                            UserRole role
-) {}
+        UserRole role,
+
+        // Novos campos para Update DTO
+        @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "Telefone inválido") String phone,
+
+        String userPicture,
+
+        Boolean privacyPolicyAccepted,
+
+        Boolean termsOfUseAccepted) {
+}

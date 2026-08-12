@@ -47,7 +47,7 @@ public class DisorderService {
 
     @Transactional(readOnly = true)
     public DisorderResponseDTO getDisorderById(Integer disorderId,
-                                               Authentication authentication) throws Exception {
+            Authentication authentication) throws Exception {
         Disorder disorder = findOrThrow(disorderId);
 
         boolean canAccess = canAccessSensitiveData(authentication, disorder.getUser().getId());
@@ -62,7 +62,7 @@ public class DisorderService {
 
     @Transactional(readOnly = true)
     public List<DisorderResponseDTO> getDisordersByUser(Integer userId,
-                                                        Authentication authentication) {
+            Authentication authentication) {
         if (!userRepository.existsById(userId)) {
             throw new EntityNotFoundException("Usuário não encontrado com ID: " + userId);
         }
@@ -77,7 +77,8 @@ public class DisorderService {
                     } catch (Exception e) {
                         throw new RuntimeException(
                                 "Erro ao processar dados do transtorno ID: "
-                                        + disorder.getMedicalRecordId(), e);
+                                        + disorder.getMedicalRecordId(),
+                                e);
                     }
                 })
                 .toList();
@@ -85,8 +86,8 @@ public class DisorderService {
 
     @Transactional
     public DisorderResponseDTO updateDisorder(Integer disorderId,
-                                              DisorderUpdateDTO dto,
-                                              Authentication authentication) throws Exception {
+            DisorderUpdateDTO dto,
+            Authentication authentication) throws Exception {
         Disorder disorder = findOrThrow(disorderId);
 
         if (!canAccessSensitiveData(authentication, disorder.getUser().getId())) {
@@ -94,11 +95,11 @@ public class DisorderService {
                     "Você não tem permissão para editar dados de transtornos.");
         }
 
-        if (dto.disorderName()   != null)
+        if (dto.disorderName() != null)
             disorder.setDisorderName(encryptionUtil.encrypt(dto.disorderName()));
         if (dto.disorderDegree() != null)
             disorder.setDisorderDegree(encryptionUtil.encrypt(dto.disorderDegree()));
-        if (dto.description()    != null)
+        if (dto.description() != null)
             disorder.setDescription(encryptionUtil.encrypt(dto.description()));
 
         return toResponseDTO(disorderRepository.save(disorder), true);
@@ -118,12 +119,13 @@ public class DisorderService {
 
     private boolean canAccessSensitiveData(Authentication authentication, Integer targetUserId) {
         UserRole role = extractRole(authentication);
-        if (role == null) return false;
+        if (role == null)
+            return false;
 
         return switch (role) {
-            case DOCTOR  -> true;
+            case DOCTOR -> true;
             case PATIENT -> isOwner(authentication, targetUserId);
-            default      -> false; // ADMIN, POLICE, FIREFIGHTER, RESCUER sem acesso
+            default -> false; // ADMIN, POLICE, FIREFIGHTER, RESCUER sem acesso
         };
     }
 
@@ -147,7 +149,7 @@ public class DisorderService {
     }
 
     private DisorderResponseDTO toResponseDTO(Disorder disorder,
-                                              boolean canDecrypt) throws Exception {
+            boolean canDecrypt) throws Exception {
         if (canDecrypt) {
             return new DisorderResponseDTO(
                     disorder.getMedicalRecordId(),
@@ -157,8 +159,8 @@ public class DisorderService {
                     disorder.getDescription() != null
                             ? encryptionUtil.decrypt(disorder.getDescription())
                             : null,
-                    true
-            );
+                    // Retornar sensitive falso se o dado for descriptografado/aberto
+                    false);
         }
 
         return new DisorderResponseDTO(
@@ -167,8 +169,8 @@ public class DisorderService {
                 "[DADOS SENSÍVEIS]",
                 "[DADOS SENSÍVEIS]",
                 "[DADOS SENSÍVEIS]",
-                true
-        );
+                // Retornar sensitive verdadeiro se o dado for oculto
+                true);
     }
 
     private Disorder findOrThrow(Integer id) {

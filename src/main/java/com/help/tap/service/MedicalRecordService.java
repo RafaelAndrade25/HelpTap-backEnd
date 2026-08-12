@@ -30,8 +30,7 @@ public class MedicalRecordService {
         if (medicalRecordRepository.existsByUser_Id(dto.userId())) {
             throw new BusinessRuleException(
                     "O usuário ID " + dto.userId() + " já possui uma ficha médica cadastrada. " +
-                            "Use PUT /api/medical-records/user/" + dto.userId() + " para atualizá-la."
-            );
+                            "Use PUT /api/medicalRecords/" + dto.userId() + " para atualizá-la.");
         }
 
         MedicalRecord record = MedicalRecord.builder()
@@ -60,21 +59,26 @@ public class MedicalRecordService {
         return MedicalRecordResponseDTO.fromEntity(
                 medicalRecordRepository.findByUser_Id(userId)
                         .orElseThrow(() -> new EntityNotFoundException(
-                                "Nenhuma ficha médica encontrada para o usuário ID: " + userId))
-        );
+                                "Nenhuma ficha médica encontrada para o usuário ID: " + userId)));
     }
 
     @Transactional
     public MedicalRecordResponseDTO updateMedicalRecord(Integer medicalRecordId,
-                                                        MedicalRecordUpdateDTO dto) {
+            MedicalRecordUpdateDTO dto) {
         MedicalRecord record = findByIdOrThrow(medicalRecordId);
 
-        if (dto.bloodType()   != null) record.setBloodType(dto.bloodType().toUpperCase());
-        if (dto.height()      != null) record.setHeight(dto.height());
-        if (dto.weight()      != null) record.setWeight(dto.weight());
-        if (dto.ethnicity()   != null) record.setEthnicity(dto.ethnicity());
-        if (dto.organDonor()  != null) record.setOrganDonor(dto.organDonor());
-        if (dto.description() != null) record.setDescription(dto.description());
+        if (dto.bloodType() != null)
+            record.setBloodType(dto.bloodType().toUpperCase());
+        if (dto.height() != null)
+            record.setHeight(dto.height());
+        if (dto.weight() != null)
+            record.setWeight(dto.weight());
+        if (dto.ethnicity() != null)
+            record.setEthnicity(dto.ethnicity());
+        if (dto.organDonor() != null)
+            record.setOrganDonor(dto.organDonor());
+        if (dto.description() != null)
+            record.setDescription(dto.description());
 
         return MedicalRecordResponseDTO.fromEntity(medicalRecordRepository.save(record));
     }

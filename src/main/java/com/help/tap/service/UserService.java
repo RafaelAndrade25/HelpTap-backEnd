@@ -58,6 +58,14 @@ public class UserService {
                 .motherName(userCreateDTO.nameOfMother())
                 .identifier(userCreateDTO.identifier())
                 .role(userCreateDTO.role())
+                // Mapeamento de novos campos no createUser
+                .phone(userCreateDTO.phone())
+                .userPicture(userCreateDTO.userPicture())
+                .privacyPolicyAccepted(
+                        userCreateDTO.privacyPolicyAccepted() != null ? userCreateDTO.privacyPolicyAccepted() : false)
+                .termsOfUseAccepted(
+                        userCreateDTO.termsOfUseAccepted() != null ? userCreateDTO.termsOfUseAccepted() : false)
+                .deleted(false)
                 .build();
         User savedUser = userRepository.save(user);
         return toResponseDTO(savedUser);
@@ -66,6 +74,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO getUserById(Integer id) {
         User user = userRepository.findById(id)
+                .filter(u -> !u.getDeleted())
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + id));
         return toResponseDTO(user);
 
@@ -74,6 +83,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
+                .filter(u -> !u.getDeleted())
                 .orElseThrow(() -> new IllegalArgumentException("User not found with email: " + email));
 
         return toResponseDTO(user);
@@ -82,7 +92,9 @@ public class UserService {
     @Transactional
     public List<UserResponseDTO> getAllUsers() {
         return userRepository.findAll()
-                .stream().map(this::toResponseDTO)
+                .stream()
+                .filter(u -> !u.getDeleted())
+                .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
@@ -90,6 +102,7 @@ public class UserService {
     public List<UserResponseDTO> getUsersByRole(UserRole role) {
         return userRepository.findByRole(role)
                 .stream()
+                .filter(u -> !u.getDeleted())
                 .map(this::toResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -97,6 +110,7 @@ public class UserService {
     @Transactional
     public UserResponseDTO updateUser(Integer id, UserUpdateDTO dto) {
         User user = userRepository.findById(id)
+                .filter(u -> !u.getDeleted())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com ID: " + id));
 
         if (dto.email() != null && !dto.email().equals(user.getEmail())) {
@@ -112,39 +126,71 @@ public class UserService {
             }
             user.setIdentifier(dto.identifier());
         }
-            if (dto.fullName() != null) user.setFullName(dto.fullName());
-            if (dto.dateBirth() != null) user.setBirthDate(dto.dateBirth());
-            if (dto.sex() != null) user.setSex(dto.sex());
-            if (dto.password() != null) user.setPassword(passwordEncoder.encode(dto.password()));
-            if (dto.nameOfFather() != null) user.setFatherName(dto.nameOfFather());
-            if (dto.nameOfMother() != null) user.setMotherName(dto.nameOfMother());
-            if (dto.role() != null) user.setRole(dto.role());
+        if (dto.fullName() != null)
+            user.setFullName(dto.fullName());
+        if (dto.dateBirth() != null)
+            user.setBirthDate(dto.dateBirth());
+        if (dto.sex() != null)
+            user.setSex(dto.sex());
+        if (dto.password() != null)
+            user.setPassword(passwordEncoder.encode(dto.password()));
+        if (dto.nameOfFather() != null)
+            user.setFatherName(dto.nameOfFather());
+        if (dto.nameOfMother() != null)
+            user.setMotherName(dto.nameOfMother());
+        if (dto.role() != null)
+            user.setRole(dto.role());
 
-            User updatedUser = userRepository.save(user);
-            return toResponseDTO(updatedUser);
+        // Atualização de novos campos
+        if (dto.phone() != null)
+            user.setPhone(dto.phone());
+        if (dto.userPicture() != null)
+            user.setUserPicture(dto.userPicture());
+        if (dto.privacyPolicyAccepted() != null)
+            user.setPrivacyPolicyAccepted(dto.privacyPolicyAccepted());
+        if (dto.termsOfUseAccepted() != null)
+            user.setTermsOfUseAccepted(dto.termsOfUseAccepted());
+
+        User updatedUser = userRepository.save(user);
+        return toResponseDTO(updatedUser);
     }
 
     @Transactional
-    public void deleteUser(Integer id) {
-        if (!userRepository.existsById(id)) {
-            throw new IllegalArgumentException("Usuário não encontrado com ID: " + id);
+    public void deleteUser(Integer id, org.springframework.security.core.Authentication authentication) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com ID: " + id));
+
+        // 1. Correção em tal problema (Permitir apenas ADMIN ou o próprio dono excluir
+        // a conta, exclusão lógica para arquivar LGPD)
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && !isOwner(authentication, id)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "Você não tem permissão para excluir esta conta.");
         }
-        userRepository.deleteById(id);
+
+        user.setDeleted(true);
+        // Desvincula email e CPF para permitir novo cadastro sem violar constraint
+        // unique
+        user.setEmail(user.getEmail() + "_deleted_" + id);
+        user.setIdentifier(user.getIdentifier() != null ? user.getIdentifier() + "_del_" + id : null);
+        userRepository.save(user);
     }
 
-    private void validateUniqueEmail(String email){
+    private void validateUniqueEmail(String email) {
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already registered: " + email);
         }
     }
 
-    private void validateUniqueNationalRegistration(String nationalRegistration){
+    private void validateUniqueNationalRegistration(String nationalRegistration) {
         if (userRepository.existsByNationalRegistration(nationalRegistration)) {
             throw new IllegalArgumentException("National Registration already registered" + nationalRegistration);
         }
     }
 
-    private void validateUniqueIdentifier(String identifier){
+    private void validateUniqueIdentifier(String identifier) {
         if (userRepository.existsByIdentifier(identifier)) {
             throw new IllegalArgumentException("Identifier already registered" + identifier);
         }
@@ -167,11 +213,10 @@ public class UserService {
         credentialValidationClient.validate(
                 info.credential(),
                 info.uf(),
-                info.type()
-        );
+                info.type());
     }
 
-    private CredentialInfo extractCredentialInfo(String identifier, UserRole role){
+    private CredentialInfo extractCredentialInfo(String identifier, UserRole role) {
         return switch (role) {
             case DOCTOR -> extractCrmInfo(identifier);
             case POLICE -> extractPoliceInfo(identifier);
@@ -181,12 +226,11 @@ public class UserService {
         };
     }
 
-    private CredentialInfo extractCrmInfo(String identifier){
+    private CredentialInfo extractCrmInfo(String identifier) {
         String[] parts = identifier.toUpperCase().split("-");
         if (parts.length != 2) {
             throw new IllegalArgumentException(
-                    "Invalid CRM format. It Must Be: CRM123456-SP ou 123456-SP"
-            );
+                    "Invalid CRM format. It Must Be: CRM123456-SP ou 123456-SP");
         }
 
         String crm = parts[0].replace("CRM", "").trim();
@@ -207,8 +251,7 @@ public class UserService {
         String[] parts = identifier.toUpperCase().split("-");
         if (parts.length != 2) {
             throw new IllegalArgumentException(
-                    "Invalid COREN format. It Must Be: COREN123456-SP ou 123456-SP"
-            );
+                    "Invalid COREN format. It Must Be: COREN123456-SP ou 123456-SP");
         }
 
         String coren = parts[0].replace("COREN", "").trim();
@@ -229,8 +272,7 @@ public class UserService {
         String[] parts = identifier.toUpperCase().split("-");
         if (parts.length < 2) {
             throw new IllegalArgumentException(
-                    "Invalid Police Functional ID format. It Must Be: POL12345-SSP-SP"
-            );
+                    "Invalid Police Functional ID format. It Must Be: POL12345-SSP-SP");
         }
 
         String uf = parts[parts.length - 1].trim();
@@ -246,8 +288,7 @@ public class UserService {
         String[] parts = identifier.toUpperCase().split("-");
         if (parts.length < 2) {
             throw new IllegalArgumentException(
-                    "Invalid Firefighter Functional ID format. It Must Be: CBM98765-SP"
-            );
+                    "Invalid Firefighter Functional ID format. It Must Be: CBM98765-SP");
         }
 
         String uf = parts[parts.length - 1].trim();
@@ -269,7 +310,8 @@ public class UserService {
         };
     }
 
-    private record CredentialInfo(String credential, String uf, String type) {}
+    private record CredentialInfo(String credential, String uf, String type) {
+    }
 
     public boolean isOwner(org.springframework.security.core.Authentication authentication, Integer userId) {
         if (authentication == null || authentication.getName() == null) {
@@ -293,7 +335,11 @@ public class UserService {
                 user.getFatherName(),
                 user.getMotherName(),
                 user.getIdentifier(),
-                user.getRole()
-        );
+                user.getRole(),
+                // Retornar novos campos no DTO de resposta
+                user.getPhone(),
+                user.getUserPicture(),
+                user.getPrivacyPolicyAccepted(),
+                user.getTermsOfUseAccepted());
     }
 }

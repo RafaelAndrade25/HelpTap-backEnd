@@ -29,7 +29,8 @@ public class WearableService {
     @Value("${helptap.wearable.max-per-user:5}")
     private int maxWearablesPerUser;
 
-    @Value("${helptap.wearable.base-url:https://helptap.com/wearable/}")
+    // Ajuste da URL base para apontar para o app web real
+    @Value("${helptap.wearable.base-url:https://web.helptap.com/wearable/}")
     private String baseUrl;
 
     // -------------------------------------------------------------------------
@@ -47,7 +48,7 @@ public class WearableService {
                 .user(user)
                 .wearableName(dto.wearableName())
                 .status(true)
-                .accessUrl(generateUniqueUUID())  // REGRA 2: UUID único garantido
+                .accessUrl(generateUniqueUUID()) // REGRA 2: UUID único garantido
                 .bindingDate(LocalDate.now())
                 .build();
 
@@ -74,9 +75,12 @@ public class WearableService {
     public WearableResponseDTO updateWearable(Integer id, WearableUpdateDTO dto) {
         Wearable wearable = findOrThrow(id);
 
-        // REGRA 3: accessUrl e bindingDate são imutáveis — nunca expostos no DTO de update
-        if (dto.wearableName() != null) wearable.setWearableName(dto.wearableName());
-        if (dto.status()       != null) wearable.setStatus(dto.status());
+        // REGRA 3: accessUrl e bindingDate são imutáveis — nunca expostos no DTO de
+        // update
+        if (dto.wearableName() != null)
+            wearable.setWearableName(dto.wearableName());
+        if (dto.status() != null)
+            wearable.setStatus(dto.status());
 
         return WearableResponseDTO.fromEntity(wearableRepository.save(wearable), baseUrl);
     }
@@ -96,8 +100,7 @@ public class WearableService {
         if (Boolean.TRUE.equals(wearable.getStatus())) {
             throw new BusinessRuleException(
                     "Não é possível excluir uma pulseira ativa. " +
-                            "Desative-a primeiro via PATCH /api/wearables/" + id + "/status."
-            );
+                            "Desative-a primeiro via PATCH /api/wearables/" + id + "/status.");
         }
 
         wearableRepository.deleteById(id);
