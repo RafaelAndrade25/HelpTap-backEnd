@@ -30,7 +30,7 @@ public class WearableService {
     private int maxWearablesPerUser;
 
     // Ajuste da URL base para apontar para o app web real
-    @Value("${helptap.wearable.base-url:https://web.helptap.com/wearable/}")
+    @Value("${helptap.wearable.base-url:https://helptap-web.vercel.app/pulseira/}")
     private String baseUrl;
 
     // -------------------------------------------------------------------------
