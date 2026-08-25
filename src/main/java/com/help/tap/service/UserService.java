@@ -10,6 +10,8 @@ import com.help.tap.repository.UserRepository;
 import jakarta.transaction.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -52,13 +54,16 @@ public class UserService {
             int age = java.time.Period.between(userCreateDTO.dateBirth(), java.time.LocalDate.now()).getYears();
             if (age < 18) {
                 if (userCreateDTO.legalGuardianName() == null || userCreateDTO.legalGuardianName().isBlank() ||
-                    userCreateDTO.legalGuardianCpf() == null || userCreateDTO.legalGuardianCpf().isBlank() ||
-                    !Boolean.TRUE.equals(userCreateDTO.legalGuardianConsent())) {
-                    throw new IllegalArgumentException("Usuários menores de 18 anos precisam informar o nome, CPF e o consentimento do responsável legal.");
+                        userCreateDTO.legalGuardianCpf() == null || userCreateDTO.legalGuardianCpf().isBlank() ||
+                        !Boolean.TRUE.equals(userCreateDTO.legalGuardianConsent())) {
+                    throw new IllegalArgumentException(
+                            "Usuários menores de 18 anos precisam informar o nome, CPF e o consentimento do responsável legal.");
                 }
             } else {
-                if (userCreateDTO.legalGuardianName() != null || userCreateDTO.legalGuardianCpf() != null || Boolean.TRUE.equals(userCreateDTO.legalGuardianConsent())) {
-                    throw new IllegalArgumentException("Usuários com 18 anos ou mais não precisam informar dados de responsável legal.");
+                if (userCreateDTO.legalGuardianName() != null || userCreateDTO.legalGuardianCpf() != null
+                        || Boolean.TRUE.equals(userCreateDTO.legalGuardianConsent())) {
+                    throw new IllegalArgumentException(
+                            "Usuários com 18 anos ou mais não precisam informar dados de responsável legal.");
                 }
             }
         }
@@ -181,25 +186,25 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(Integer id, org.springframework.security.core.Authentication authentication) {
+    public void deleteUser(Integer id, Authentication authentication) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com ID: " + id));
 
-        // 1. Correção em tal problema (Permitir apenas ADMIN ou o próprio dono excluir
-        // a conta, exclusão lógica para arquivar LGPD)
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         if (!isAdmin && !isOwner(authentication, id)) {
-            throw new org.springframework.security.access.AccessDeniedException(
+            throw new AccessDeniedException(
                     "Você não tem permissão para excluir esta conta.");
         }
 
         user.setDeleted(true);
-        // Desvincula email e CPF para permitir novo cadastro sem violar constraint
-        // unique
+
         user.setEmail(user.getEmail() + "_deleted_" + id);
-        user.setIdentifier(user.getIdentifier() != null ? user.getIdentifier() + "_del_" + id : null);
+        user.setNationalRegistration(user.getNationalRegistration() + "_del_" + id);
+        if (user.getIdentifier() != null) {
+            user.setIdentifier(user.getIdentifier() + "_del_" + id);
+        }
         userRepository.save(user);
     }
 
