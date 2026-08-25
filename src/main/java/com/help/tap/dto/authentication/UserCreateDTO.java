@@ -38,5 +38,11 @@ public record UserCreateDTO(
 
         Boolean privacyPolicyAccepted,
 
-        Boolean termsOfUseAccepted) {
+        Boolean termsOfUseAccepted,
+
+        String legalGuardianName,
+
+        @CPF(message = "CPF do responsável é inválido") String legalGuardianCpf,
+
+        Boolean legalGuardianConsent) {
 }

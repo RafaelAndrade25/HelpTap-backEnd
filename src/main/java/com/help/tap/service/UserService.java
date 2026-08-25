@@ -48,6 +48,21 @@ public class UserService {
             throw new IllegalArgumentException("Identifier already in use");
         }
 
+        if (userCreateDTO.dateBirth() != null) {
+            int age = java.time.Period.between(userCreateDTO.dateBirth(), java.time.LocalDate.now()).getYears();
+            if (age < 18) {
+                if (userCreateDTO.legalGuardianName() == null || userCreateDTO.legalGuardianName().isBlank() ||
+                    userCreateDTO.legalGuardianCpf() == null || userCreateDTO.legalGuardianCpf().isBlank() ||
+                    !Boolean.TRUE.equals(userCreateDTO.legalGuardianConsent())) {
+                    throw new IllegalArgumentException("Usuários menores de 18 anos precisam informar o nome, CPF e o consentimento do responsável legal.");
+                }
+            } else {
+                if (userCreateDTO.legalGuardianName() != null || userCreateDTO.legalGuardianCpf() != null || Boolean.TRUE.equals(userCreateDTO.legalGuardianConsent())) {
+                    throw new IllegalArgumentException("Usuários com 18 anos ou mais não precisam informar dados de responsável legal.");
+                }
+            }
+        }
+
         User user = User.builder().fullName(userCreateDTO.fullName())
                 .nationalRegistration(userCreateDTO.cpf())
                 .birthDate(userCreateDTO.dateBirth())
@@ -65,6 +80,10 @@ public class UserService {
                         userCreateDTO.privacyPolicyAccepted() != null ? userCreateDTO.privacyPolicyAccepted() : false)
                 .termsOfUseAccepted(
                         userCreateDTO.termsOfUseAccepted() != null ? userCreateDTO.termsOfUseAccepted() : false)
+                .legalGuardianName(userCreateDTO.legalGuardianName())
+                .legalGuardianCpf(userCreateDTO.legalGuardianCpf())
+                .legalGuardianConsent(
+                        userCreateDTO.legalGuardianConsent() != null ? userCreateDTO.legalGuardianConsent() : false)
                 .deleted(false)
                 .build();
         User savedUser = userRepository.save(user);
@@ -150,6 +169,12 @@ public class UserService {
             user.setPrivacyPolicyAccepted(dto.privacyPolicyAccepted());
         if (dto.termsOfUseAccepted() != null)
             user.setTermsOfUseAccepted(dto.termsOfUseAccepted());
+        if (dto.legalGuardianName() != null)
+            user.setLegalGuardianName(dto.legalGuardianName());
+        if (dto.legalGuardianCpf() != null)
+            user.setLegalGuardianCpf(dto.legalGuardianCpf());
+        if (dto.legalGuardianConsent() != null)
+            user.setLegalGuardianConsent(dto.legalGuardianConsent());
 
         User updatedUser = userRepository.save(user);
         return toResponseDTO(updatedUser);
@@ -340,6 +365,9 @@ public class UserService {
                 user.getPhone(),
                 user.getUserPicture(),
                 user.getPrivacyPolicyAccepted(),
-                user.getTermsOfUseAccepted());
+                user.getTermsOfUseAccepted(),
+                user.getLegalGuardianName(),
+                user.getLegalGuardianCpf(),
+                user.getLegalGuardianConsent());
     }
 }

@@ -78,6 +78,16 @@ public class User implements UserDetails {
     @Builder.Default
     private Boolean deleted = false;
 
+    @Column(name = "legal_guardian_name")
+    private String legalGuardianName;
+
+    @Column(name = "legal_guardian_cpf", length = 11)
+    private String legalGuardianCpf;
+
+    @Column(name = "legal_guardian_consent")
+    @Builder.Default
+    private Boolean legalGuardianConsent = false;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Address> addresses = new ArrayList<>();

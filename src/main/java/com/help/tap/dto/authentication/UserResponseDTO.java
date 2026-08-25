@@ -17,5 +17,8 @@ public record UserResponseDTO(Integer id,
         String phone,
         String userPicture,
         Boolean privacyPolicyAccepted,
-        Boolean termsOfUseAccepted) {
+        Boolean termsOfUseAccepted,
+        String legalGuardianName,
+        String legalGuardianCpf,
+        Boolean legalGuardianConsent) {
 }
