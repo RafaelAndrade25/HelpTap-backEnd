@@ -11,11 +11,23 @@ import java.util.UUID;
 @Repository
 public interface WearableRepository extends JpaRepository<Wearable, Integer> {
 
-    // Lista todas as pulseiras de um usuário
+    // Lista todas as pulseiras ativas/não excluídas de um usuário
+    List<Wearable> findByUser_IdAndDeletedFalse(Integer userId);
+
+    // Busca pulseira não excluída por ID
+    Optional<Wearable> findByIdAndDeletedFalse(Integer id);
+
+    // Lista todas as pulseiras de um usuário (incluindo histórico)
     List<Wearable> findByUser_Id(Integer userId);
 
-    // Lookup pelo UUID gravado na tag NFC — usado no endpoint de leitura NFC (Fase 3)
+    // Contagem de pulseiras não excluídas por usuário
+    int countByUser_IdAndDeletedFalse(Integer userId);
+
+    // Lookup pelo UUID gravado na tag NFC — usado no endpoint de leitura NFC
     Optional<Wearable> findByAccessUrl(UUID accessUrl);
+
+    // Lookup por UUID filtrando apenas não excluídas
+    Optional<Wearable> findByAccessUrlAndDeletedFalse(UUID accessUrl);
 
     // Verifica ownership antes de operações sensíveis
     boolean existsByIdAndUser_Id(Integer id, Integer userId);

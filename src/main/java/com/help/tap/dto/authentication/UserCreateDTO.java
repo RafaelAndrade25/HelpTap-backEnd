@@ -44,5 +44,7 @@ public record UserCreateDTO(
 
         @CPF(message = "CPF do responsável é inválido") String legalGuardianCpf,
 
-        Boolean legalGuardianConsent) {
+        Boolean legalGuardianConsent,
+        Boolean hasHealthInsurance,
+        String healthInsuranceNumber) {
 }

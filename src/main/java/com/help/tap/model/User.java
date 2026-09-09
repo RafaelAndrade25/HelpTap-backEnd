@@ -88,6 +88,13 @@ public class User implements UserDetails {
     @Builder.Default
     private Boolean legalGuardianConsent = false;
 
+    @Column(name = "has_health_insurance")
+    @Builder.Default
+    private Boolean hasHealthInsurance = false;
+
+    @Column(name = "health_insurance_number")
+    private String healthInsuranceNumber;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Address> addresses = new ArrayList<>();

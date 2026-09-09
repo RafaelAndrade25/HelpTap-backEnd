@@ -13,6 +13,10 @@ public record PublicProfileDTO(
         String bloodType,
         Boolean organDonor,
 
+        // Convênio médico
+        Boolean hasHealthInsurance,
+        String healthInsuranceNumber,
+
         // Alergias críticas — apenas HIGH e CRITICAL (ver AllergyRepository)
         List<AllergyResponseDTO> criticalAllergies,
 

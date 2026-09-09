@@ -1,5 +1,6 @@
 package com.help.tap.service;
 
+import com.help.tap.dto.address.AddressResponseDTO;
 import com.help.tap.dto.allergies.AllergyResponseDTO;
 import com.help.tap.dto.deficiency.DeficiencyResponseDTO;
 import com.help.tap.dto.disorder.DisorderResponseDTO;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -31,6 +33,7 @@ public class ProfileService {
     private final AllergyRepository         allergyRepository;
     private final DeficiencyRepository      deficiencyRepository;
     private final EmergencyContactRepository emergencyContactRepository;
+    private final AddressRepository         addressRepository;
     private final EncryptionUtil            encryptionUtil;
 
 
@@ -64,11 +67,16 @@ public class ProfileService {
                 .map(EmergencyContactResponseDTO::fromEntity)
                 .toList();
 
+        Boolean hasInsurance = user.getHasHealthInsurance();
+        String insuranceNumber = Boolean.TRUE.equals(hasInsurance) ? user.getHealthInsuranceNumber() : null;
+
         return new PublicProfileDTO(
                 userId,
                 user.getFullName(),
                 bloodType,
                 organDonor,
+                hasInsurance,
+                insuranceNumber,
                 criticalAllergies,
                 deficiencies,
                 emergencyContacts
@@ -116,15 +124,28 @@ public class ProfileService {
                 .map(EmergencyContactResponseDTO::fromEntity)
                 .toList();
 
+        boolean canReadAddress = canReadAddress(role, userId, authentication);
+        List<AddressResponseDTO> addresses = canReadAddress
+                ? addressRepository.findByUserId(userId).stream()
+                        .map(AddressResponseDTO::fromEntity)
+                        .toList()
+                : Collections.emptyList();
+
+        Boolean hasInsurance = user.getHasHealthInsurance();
+        String insuranceNumber = Boolean.TRUE.equals(hasInsurance) ? user.getHealthInsuranceNumber() : null;
+
         return new ProfessionalProfileDTO(
                 userId,
                 user.getFullName(),
+                hasInsurance,
+                insuranceNumber,
                 medicalSummary,
                 illnesses,
                 disorders,
                 allergies,
                 deficiencies,
                 emergencyContacts,
+                addresses,
                 role.name()
         );
     }
@@ -204,16 +225,26 @@ public class ProfileService {
     }
 
     /**
-     * Disorders (psiquiátricos/neurodivergências) são restritos a DOCTOR e ao próprio PATIENT.
-     * RESCUER, FIREFIGHTER e POLICE não acessam — protocolo de privacidade LGPD.
-     * deve ser vizualidada por socorrista tambem
+     * Transtornos (psiquiátricos/neurodivergências) são visíveis para DOCTOR, RESCUER, FIREFIGHTER, POLICE, ADMIN e o próprio PATIENT.
      */
     private boolean canReadDisorders(UserRole role, Integer targetUserId,
                                      Authentication auth) {
         return switch (role) {
-            case DOCTOR  -> true;
+            case DOCTOR, RESCUER, FIREFIGHTER, POLICE, ADMIN -> true;
             case PATIENT -> isOwner(auth, targetUserId);
             default      -> false;
+        };
+    }
+
+    /**
+     * Endereço da vítima é visível para POLICE, ADMIN e o próprio PATIENT.
+     */
+    private boolean canReadAddress(UserRole role, Integer targetUserId,
+                                   Authentication auth) {
+        return switch (role) {
+            case POLICE, ADMIN -> true;
+            case PATIENT       -> isOwner(auth, targetUserId);
+            default            -> false;
         };
     }
 

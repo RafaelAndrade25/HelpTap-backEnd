@@ -65,7 +65,7 @@ public class WearableService {
         if (!userRepository.existsById(userId)) {
             throw new EntityNotFoundException("Usuário não encontrado com ID: " + userId);
         }
-        return wearableRepository.findByUser_Id(userId)
+        return wearableRepository.findByUser_IdAndDeletedFalse(userId)
                 .stream()
                 .map(wearable -> WearableResponseDTO.fromEntity(wearable, baseUrl))
                 .toList();
@@ -103,17 +103,18 @@ public class WearableService {
                             "Desative-a primeiro via PATCH /api/wearables/" + id + "/status.");
         }
 
-        wearableRepository.deleteById(id);
+        wearable.setDeleted(true);
+        wearableRepository.save(wearable);
     }
 
     private Wearable findOrThrow(Integer id) {
-        return wearableRepository.findById(id)
+        return wearableRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Pulseira não encontrada com ID: " + id));
     }
 
     private void enforceWearableLimit(Integer userId) {
-        int count = wearableRepository.findByUser_Id(userId).size();
+        int count = wearableRepository.countByUser_IdAndDeletedFalse(userId);
         if (count >= maxWearablesPerUser) {
             throw new WearableLimitExceededException(userId, maxWearablesPerUser);
         }

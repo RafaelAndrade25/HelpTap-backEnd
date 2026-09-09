@@ -89,6 +89,9 @@ public class UserService {
                 .legalGuardianCpf(userCreateDTO.legalGuardianCpf())
                 .legalGuardianConsent(
                         userCreateDTO.legalGuardianConsent() != null ? userCreateDTO.legalGuardianConsent() : false)
+                .hasHealthInsurance(
+                        userCreateDTO.hasHealthInsurance() != null ? userCreateDTO.hasHealthInsurance() : false)
+                .healthInsuranceNumber(userCreateDTO.healthInsuranceNumber())
                 .deleted(false)
                 .build();
         User savedUser = userRepository.save(user);
@@ -180,6 +183,10 @@ public class UserService {
             user.setLegalGuardianCpf(dto.legalGuardianCpf());
         if (dto.legalGuardianConsent() != null)
             user.setLegalGuardianConsent(dto.legalGuardianConsent());
+        if (dto.hasHealthInsurance() != null)
+            user.setHasHealthInsurance(dto.hasHealthInsurance());
+        if (dto.healthInsuranceNumber() != null)
+            user.setHealthInsuranceNumber(dto.healthInsuranceNumber());
 
         User updatedUser = userRepository.save(user);
         return toResponseDTO(updatedUser);
@@ -373,6 +380,8 @@ public class UserService {
                 user.getTermsOfUseAccepted(),
                 user.getLegalGuardianName(),
                 user.getLegalGuardianCpf(),
-                user.getLegalGuardianConsent());
+                user.getLegalGuardianConsent(),
+                user.getHasHealthInsurance(),
+                user.getHealthInsuranceNumber());
     }
 }

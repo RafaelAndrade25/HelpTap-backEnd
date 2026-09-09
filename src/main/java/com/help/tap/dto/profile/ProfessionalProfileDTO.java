@@ -1,5 +1,6 @@
 package com.help.tap.dto.profile;
 
+import com.help.tap.dto.address.AddressResponseDTO;
 import com.help.tap.dto.allergies.AllergyResponseDTO;
 import com.help.tap.dto.deficiency.DeficiencyResponseDTO;
 import com.help.tap.dto.disorder.DisorderResponseDTO;
@@ -14,6 +15,10 @@ public record ProfessionalProfileDTO(
         Integer userId,
         String fullName,
 
+        // Convênio médico
+        Boolean hasHealthInsurance,
+        String healthInsuranceNumber,
+
         // Ficha médica completa
         MedicalSummaryDTO medicalRecord,
 
@@ -27,5 +32,9 @@ public record ProfessionalProfileDTO(
 
         List<EmergencyContactResponseDTO> emergencyContacts,
 
+        // Endereços (visível para POLICE e ADMIN)
+        List<AddressResponseDTO> addresses,
+
         String viewerRole
 ) {}
+

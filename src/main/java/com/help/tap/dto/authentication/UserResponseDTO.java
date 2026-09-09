@@ -20,5 +20,7 @@ public record UserResponseDTO(Integer id,
         Boolean termsOfUseAccepted,
         String legalGuardianName,
         String legalGuardianCpf,
-        Boolean legalGuardianConsent) {
+        Boolean legalGuardianConsent,
+        Boolean hasHealthInsurance,
+        String healthInsuranceNumber) {
 }

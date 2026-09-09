@@ -41,5 +41,7 @@ public record UserUpdateDTO(
 
                 @Pattern(regexp = "^([0-9]{3}\\.?[0-9]{3}\\.?[0-9]{3}\\-?[0-9]{2})$", message = "CPF do responsável é inválido") String legalGuardianCpf,
 
-                Boolean legalGuardianConsent) {
+                Boolean legalGuardianConsent,
+                Boolean hasHealthInsurance,
+                String healthInsuranceNumber) {
 }

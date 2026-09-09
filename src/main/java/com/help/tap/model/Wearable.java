@@ -33,4 +33,8 @@ public class Wearable {
 
     @Column(name = "data_vinculacao")
     private LocalDate bindingDate;
+
+    @Column(name = "deleted")
+    @Builder.Default
+    private Boolean deleted = false;
 }

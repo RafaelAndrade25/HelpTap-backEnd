@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
 
+import org.springframework.dao.DataIntegrityViolationException;
+
 import java.util.List;
 
 @RestControllerAdvice
@@ -99,6 +101,20 @@ public class GlobalExceptionHandler {
                                 .body(ErrorResponseDTO.of(
                                                 409, "Conflict",
                                                 ex.getMessage(),
+                                                request.getRequestURI()));
+        }
+
+        // -------------------------------------------------------------------------
+        // 409 — Violação de integridade referencial / dados
+        // -------------------------------------------------------------------------
+        @ExceptionHandler(DataIntegrityViolationException.class)
+        public ResponseEntity<ErrorResponseDTO> handleDataIntegrity(
+                        DataIntegrityViolationException ex, HttpServletRequest request) {
+
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(ErrorResponseDTO.of(
+                                                409, "Conflict",
+                                                "Não foi possível concluir a operação devido a vínculos com outros registros.",
                                                 request.getRequestURI()));
         }
 

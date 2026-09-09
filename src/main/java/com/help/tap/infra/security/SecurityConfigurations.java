@@ -67,7 +67,9 @@ public class SecurityConfigurations {
                                                 .requestMatchers(HttpMethod.POST, "/api/wearables")
                                                 .hasAnyRole("PATIENT", "ADMIN")
                                                 .requestMatchers("/api/wearables/**").authenticated()
-                                                .requestMatchers("/api/addresses/**").authenticated()
+                                                .requestMatchers(HttpMethod.GET, "/api/address/**", "/api/addresses/**")
+                                                .hasAnyRole("PATIENT", "ADMIN", "POLICE")
+                                                .requestMatchers("/api/address/**", "/api/addresses/**").authenticated()
                                                 .requestMatchers(HttpMethod.GET, "/api/emergency-contacts/**")
                                                 .hasAnyRole(
                                                                 "PATIENT", "ADMIN", "DOCTOR", "POLICE", "FIREFIGHTER",
@@ -76,6 +78,10 @@ public class SecurityConfigurations {
                                                 .requestMatchers(HttpMethod.GET, "/api/illnesses/**").hasAnyRole(
                                                                 "PATIENT", "ADMIN", "DOCTOR", "FIREFIGHTER", "RESCUER")
                                                 .requestMatchers("/api/illnesses/**")
+                                                .hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
+                                                .requestMatchers(HttpMethod.GET, "/api/disorders/**").hasAnyRole(
+                                                                "PATIENT", "ADMIN", "DOCTOR", "FIREFIGHTER", "RESCUER", "POLICE")
+                                                .requestMatchers("/api/disorders/**")
                                                 .hasAnyRole("PATIENT", "DOCTOR", "ADMIN")
                                                 .requestMatchers(HttpMethod.GET, "/api/deficiencies/**").hasAnyRole(
                                                                 "PATIENT", "ADMIN", "DOCTOR", "FIREFIGHTER", "RESCUER")

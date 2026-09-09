@@ -90,7 +90,7 @@ public class DisorderService {
             Authentication authentication) throws Exception {
         Disorder disorder = findOrThrow(disorderId);
 
-        if (!canAccessSensitiveData(authentication, disorder.getUser().getId())) {
+        if (!canModifyDisorder(authentication, disorder.getUser().getId())) {
             throw new BusinessRuleException(
                     "Você não tem permissão para editar dados de transtornos.");
         }
@@ -109,7 +109,7 @@ public class DisorderService {
     public void deleteDisorder(Integer disorderId, Authentication authentication) {
         Disorder disorder = findOrThrow(disorderId);
 
-        if (!canAccessSensitiveData(authentication, disorder.getUser().getId())) {
+        if (!canModifyDisorder(authentication, disorder.getUser().getId())) {
             throw new BusinessRuleException(
                     "Você não tem permissão para excluir dados de transtornos.");
         }
@@ -123,9 +123,21 @@ public class DisorderService {
             return false;
 
         return switch (role) {
-            case DOCTOR -> true;
+            case DOCTOR, RESCUER, FIREFIGHTER, POLICE, ADMIN -> true;
             case PATIENT -> isOwner(authentication, targetUserId);
-            default -> false; // ADMIN, POLICE, FIREFIGHTER, RESCUER sem acesso
+            default -> false;
+        };
+    }
+
+    private boolean canModifyDisorder(Authentication authentication, Integer targetUserId) {
+        UserRole role = extractRole(authentication);
+        if (role == null)
+            return false;
+
+        return switch (role) {
+            case DOCTOR, ADMIN -> true;
+            case PATIENT -> isOwner(authentication, targetUserId);
+            default -> false; // FIREFIGHTER, RESCUER, POLICE têm acesso apenas de leitura
         };
     }
 

@@ -116,6 +116,11 @@ public class NfcService {
                         "Pulseira não encontrada para o UUID informado. " +
                                 "Verifique se a tag NFC está íntegra."));
 
+        if (Boolean.TRUE.equals(wearable.getDeleted())) {
+            throw new BusinessRuleException(
+                    "Esta pulseira foi excluída e não pode ser lida.");
+        }
+
         if (Boolean.FALSE.equals(wearable.getStatus())) {
             throw new BusinessRuleException(
                     "Esta pulseira está desativada e não pode ser lida. " +
